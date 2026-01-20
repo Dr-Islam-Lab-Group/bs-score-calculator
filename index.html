@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>BS Calculator</title>
+  <style>
+    :root { --bg:#0b0f19; --card:#121a2a; --text:#e9eefc; --muted:#a8b3d6; --accent:#6ea8ff; --bad:#ff6b6b; }
+    body {
+      margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: radial-gradient(1200px 800px at 20% 10%, #182547 0%, var(--bg) 60%);
+      color: var(--text); padding: 28px;
+    }
+    .wrap { max-width: 980px; margin: 0 auto; display: grid; gap: 16px; }
+    .card {
+      background: color-mix(in srgb, var(--card) 92%, #000 8%);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 16px; padding: 18px 18px 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+    h1 { margin: 0 0 6px; font-size: 22px; letter-spacing: .2px; }
+    h2 { margin: 14px 0 6px; font-size: 16px; letter-spacing: .2px; color: var(--text); }
+    p { margin: 6px 0 0; color: var(--muted); line-height: 1.4; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+    @media (max-width: 780px) { .grid { grid-template-columns: 1fr; } }
+    label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+    input[type="number"], input[type="text"] {
+      width: 100%; box-sizing: border-box; padding: 10px 12px;
+      border-radius: 12px; border: 1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.25); color: var(--text);
+      outline: none;
+    }
+    input[type="number"]:focus, input[type="text"]:focus {
+      border-color: color-mix(in srgb, var(--accent) 70%, #fff 30%);
+    }
+    .row { display: flex; gap: 10px; align-items: center; justify-content: space-between; margin-top: 14px; flex-wrap: wrap; }
+    button {
+      padding: 10px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,.14);
+      background: linear-gradient(180deg, rgba(110,168,255,.25), rgba(110,168,255,.12));
+      color: var(--text); cursor: pointer; font-weight: 600;
+    }
+    button:hover { border-color: rgba(255,255,255,.22); }
+    .result {
+      font-size: 28px; font-weight: 750; letter-spacing: .2px;
+      color: color-mix(in srgb, var(--accent) 85%, #fff 15%);
+    }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .error { color: var(--bad); margin-top: 10px; white-space: pre-line; }
+    .small { font-size: 12px; color: var(--muted); }
+
+    /* Table styling */
+    .tableWrap {
+      margin-top: 14px;
+      overflow-x: auto;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.18);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 720px;
+    }
+    th, td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      white-space: nowrap;
+    }
+    th {
+      font-size: 13px;
+      color: var(--text);
+      background: rgba(255,255,255,.04);
+      position: sticky;
+      top: 0;
+    }
+    td { color: var(--muted); font-size: 13px; }
+    tr:last-child td { border-bottom: none; }
+
+    /* Similarity section styling */
+    .simBox {
+      margin-top: 14px;
+      padding: 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.18);
+    }
+    .simRow {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: end;
+      margin-top: 10px;
+    }
+    @media (max-width: 780px) {
+      .simRow { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+
+    <div class="card">
+      <h1>Binding Score (BS) Calculator</h1>
+      <p>Enter your parameters below to compute BS.</p>
+
+      <div class="grid">
+        <div>
+          <label for="Ri">Rᵢ</label>
+          <input id="Ri" type="number" step="any" value="1" />
+        </div>
+        <div>
+          <label for="Smax">Smax</label>
+          <input id="Smax" type="number" step="any" value="100" />
+        </div>
+
+        <div>
+          <label for="Si">Sᵢ</label>
+          <input id="Si" type="number" step="any" value="0" />
+        </div>
+        <div>
+          <label for="w">w (0 to 1)</label>
+          <input id="w" type="number" step="any" value="0.4" />
+        </div>
+
+        <div>
+          <label for="A">A</label>
+          <input id="A" type="number" step="any" value="0" />
+        </div>
+        <div>
+          <label for="beta">β</label>
+          <input id="beta" type="number" step="any" value="4" />
+        </div>
+      </div>
+
+      <div class="row">
+        <button id="calcBtn">Calculate</button>
+        <button id="resetBtn" type="button">Reset</button>
+
+        <div>
+          <div class="small">BS</div>
+          <div id="bsOut" class="result">—</div>
+          <div id="partsOut" class="small mono"></div>
+        </div>
+      </div>
+
+      <div id="errOut" class="error"></div>
+
+      <!-- 2D Tanimoto similarity section -->
+      <div class="simBox">
+        <h2>2D Tanimoto Similarity</h2>
+        <p class="small">
+          Enter a SMILES string, compute similarity, then the value will be added into Sᵢ.
+        </p>
+
+        <div class="simRow">
+          <div>
+            <label for="smilesInput">SMILES</label>
+            <input id="smilesInput" type="text" placeholder="e.g. CC(=O)Oc1ccccc1C(=O)O" />
+          </div>
+          <button id="simBtn" type="button">Compute Similarity</button>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <div class="small mono" id="simOut">Similarity: —</div>
+          <div class="small mono" id="siAddOut">Added to Sᵢ: —</div>
+        </div>
+
+        <div id="simErrOut" class="error"></div>
+      </div>
+
+    </div>
+
+    <div class="card">
+      <h1>About</h1>
+      <p>This tool calculates a Binding Score (BS) based on user-provided parameters.</p>
+    </div>
+
+  </div>
+
+  <script>
+    function getNum(id) {
+      const v = document.getElementById(id).value;
+      return Number(v);
+    }
+
+    function clamp01(x) {
+      if (!Number.isFinite(x)) return NaN;
+      return Math.min(1, Math.max(0, x));
+    }
+
+    // UPDATED FORMULA (from your image):
+    // BS = (Ri/Smax) * [ w*Si + (1-w)*exp(-A/beta) ] * min(1, Ri)
+    function calcBS({Ri, Smax, Si, w, A, beta}) {
+      const errors = [];
+      if (!(Smax > 0)) errors.push("Smax must be > 0");
+      if (!(beta > 0)) errors.push("β (beta) must be > 0");
+      if (!Number.isFinite(w)) errors.push("w must be a number");
+      if (Number.isFinite(w) && (w < 0 || w > 1)) errors.push("w should be between 0 and 1");
+      if (![Ri, Si, A].every(Number.isFinite)) errors.push("Ri, Si, and A must be numbers");
+
+      if (errors.length) return { ok: false, errors };
+
+      const wUsed = clamp01(w);
+
+      const leading = Ri / Smax;               // Ri/Smax
+      const expTerm = Math.exp((-A) / beta);   // exp(-A/beta)
+      const bracket = (wUsed * Si) + ((1 - wUsed) * expTerm);
+      const minTerm = Math.min(1, Ri);
+
+      const bs = leading * bracket * minTerm;
+
+      return { ok: true, bs, parts: { leading, expTerm, bracket, minTerm, wUsed } };
+    }
+
+    function format(x) {
+      if (!Number.isFinite(x)) return "NaN";
+      const abs = Math.abs(x);
+      if (abs !== 0 && (abs < 1e-4 || abs >= 1e6)) return x.toExponential(6);
+      return x.toFixed(6).replace(/\.?0+$/, "");
+    }
+
+    function computeAndRender() {
+      const inputs = {
+        Ri: getNum("Ri"),
+        Smax: getNum("Smax"),
+        Si: getNum("Si"),
+        w: getNum("w"),
+        A: getNum("A"),
+        beta: getNum("beta")
+      };
+
+      const out = document.getElementById("bsOut");
+      const parts = document.getElementById("partsOut");
+      const err = document.getElementById("errOut");
+
+      const res = calcBS(inputs);
+
+      if (!res.ok) {
+        out.textContent = "—";
+        parts.textContent = "";
+        err.textContent = "Fix these issues:\n• " + res.errors.join("\n• ");
+        return;
+      }
+
+      err.textContent = "";
+      out.textContent = format(res.bs);
+
+      parts.textContent =
+        `Ri/Smax=${format(res.parts.leading)} | exp(−A/β)=${format(res.parts.expTerm)}\n` +
+        `min(1,Ri)=${format(res.parts.minTerm)} | w=${format(res.parts.wUsed)}`;
+    }
+
+    document.getElementById("calcBtn").addEventListener("click", computeAndRender);
+    ["Ri","Smax","Si","w","A","beta"].forEach(id => {
+      document.getElementById(id).addEventListener("input", computeAndRender);
+    });
+
+    // Similarity button handler (adds similarity*100 into Si)
+    async function computeSimilarityAndAddToSi() {
+      const simErr = document.getElementById("simErrOut");
+      const simOut = document.getElementById("simOut");
+      const siAddOut = document.getElementById("siAddOut");
+
+      simErr.textContent = "";
+      simOut.textContent = "Similarity: …";
+      siAddOut.textContent = "Added to Sᵢ: …";
+
+      const smiles = (document.getElementById("smilesInput").value || "").trim();
+      if (!smiles) {
+        simOut.textContent = "Similarity: —";
+        siAddOut.textContent = "Added to Sᵢ: —";
+        simErr.textContent = "Please enter a SMILES string.";
+        return;
+      }
+
+      try {
+        const resp = await fetch("http://localhost:8000/tanimoto", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ smiles })
+        });
+
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) {
+          const msg = (data && data.detail) ? data.detail : "Failed to compute similarity.";
+          throw new Error(msg);
+        }
+
+        const similarity = Number(data.similarity);
+        if (!Number.isFinite(similarity)) throw new Error("API returned invalid similarity.");
+
+        // Convert to "Si units" (0-100) and add to current Si
+        const siDelta = similarity * 100;
+
+        const siEl = document.getElementById("Si");
+        const currentSi = Number(siEl.value);
+        const baseSi = Number.isFinite(currentSi) ? currentSi : 0;
+        const newSi = baseSi + siDelta;
+
+        siEl.value = newSi.toFixed(4).replace(/\.?0+$/, "");
+
+        simOut.textContent = `Similarity: ${similarity.toFixed(6)}`;
+        siAddOut.textContent = `Added to Sᵢ: ${siDelta.toFixed(4).replace(/\.?0+$/, "")}`;
+
+        computeAndRender();
+      } catch (e) {
+        simOut.textContent = "Similarity: —";
+        siAddOut.textContent = "Added to Sᵢ: —";
+        simErr.textContent =
+          `Similarity error: ${e.message}\n\n` +
+          `Make sure the RDKit API is running:\n` +
+          `  uvicorn server:app --host 0.0.0.0 --port 8000`;
+      }
+    }
+
+    document.getElementById("simBtn").addEventListener("click", computeSimilarityAndAddToSi);
+
+    // Reset defaults
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      document.getElementById("Ri").value = 1;
+      document.getElementById("Smax").value = 85;
+      document.getElementById("Si").value = 1;
+      document.getElementById("w").value = 0.3;
+      document.getElementById("A").value = 0;
+      document.getElementById("beta").value = 3;
+
+      document.getElementById("smilesInput").value = "";
+      document.getElementById("simOut").textContent = "Similarity: —";
+      document.getElementById("siAddOut").textContent = "Added to Sᵢ: —";
+      document.getElementById("simErrOut").textContent = "";
+
+      computeAndRender();
+    });
+
+    computeAndRender();
+  </script>
+</body>
+</html>
