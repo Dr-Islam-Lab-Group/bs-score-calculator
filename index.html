@@ -276,7 +276,7 @@
       }
 
       try {
-        const resp = await fetch("http://localhost:8000/tanimoto", {
+        const resp = await fetch("https://rdkit-api-703402153382.us-central1.run.app/tanimoto", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ smiles })
