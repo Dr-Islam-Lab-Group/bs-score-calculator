@@ -1,1 +1,354 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>BS Calculator</title>
+  <style>
+    :root { --bg:#0b0f19; --card:#121a2a; --text:#e9eefc; --muted:#a8b3d6; --accent:#6ea8ff; --bad:#ff6b6b; }
+    body {
+      margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: radial-gradient(1200px 800px at 20% 10%, #182547 0%, var(--bg) 60%);
+      color: var(--text); padding: 28px;
+    }
+    .wrap { max-width: 980px; margin: 0 auto; display: grid; gap: 16px; }
+    .card {
+      background: color-mix(in srgb, var(--card) 92%, #000 8%);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 16px; padding: 18px 18px 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+    h1 { margin: 0 0 6px; font-size: 22px; letter-spacing: .2px; }
+    h2 { margin: 14px 0 6px; font-size: 16px; letter-spacing: .2px; color: var(--text); }
+    p { margin: 6px 0 0; color: var(--muted); line-height: 1.4; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+    @media (max-width: 780px) { .grid { grid-template-columns: 1fr; } }
+    label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+    input[type="number"], input[type="text"] {
+      width: 100%; box-sizing: border-box; padding: 10px 12px;
+      border-radius: 12px; border: 1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.25); color: var(--text);
+      outline: none;
+    }
+    input[type="number"]:focus, input[type="text"]:focus {
+      border-color: color-mix(in srgb, var(--accent) 70%, #fff 30%);
+    }
+    .row { display: flex; gap: 10px; align-items: center; justify-content: space-between; margin-top: 14px; flex-wrap: wrap; }
+    button {
+      padding: 10px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,.14);
+      background: linear-gradient(180deg, rgba(110,168,255,.25), rgba(110,168,255,.12));
+      color: var(--text); cursor: pointer; font-weight: 600;
+    }
+    button:hover { border-color: rgba(255,255,255,.22); }
+    .result {
+      font-size: 28px; font-weight: 750; letter-spacing: .2px;
+      color: color-mix(in srgb, var(--accent) 85%, #fff 15%);
+    }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .error { color: var(--bad); margin-top: 10px; white-space: pre-line; }
+    .small { font-size: 12px; color: var(--muted); }
+
+    /* Similarity section styling */
+    .simBox {
+      margin-top: 14px;
+      padding: 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.18);
+    }
+    .simRow {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: end;
+      margin-top: 10px;
+    }
+    @media (max-width: 780px) {
+      .simRow { grid-template-columns: 1fr; }
+    }
+
+    /* Top actions */
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+
+    <!-- 1) Create SMILES button -->
+    <div class="card">
+      <h1>Create SMILES</h1>
+      <p>Open PubChem Sketcher to draw a molecule and generate a SMILES string.</p>
+      <div class="actions">
+        <button id="createSmilesBtn" type="button">Create SMILES</button>
+      </div>
+      <p class="small mono" style="margin-top:10px;">
+        Opens: https://pubchem.ncbi.nlm.nih.gov/edit3/index.html
+      </p>
+    </div>
+
+    <!-- 2) Similarity calculation section -->
+    <div class="card">
+      <h1>2D Tanimoto Similarity</h1>
+      <p class="small">
+        Enter a SMILES string, compute similarity, then the value will replace Sᵢ in the BS calculator below.
+      </p>
+
+      <div class="simBox">
+        <div class="simRow">
+          <div>
+            <label for="smilesInput">SMILES</label>
+            <input id="smilesInput" type="text" placeholder="e.g. CC(=O)Oc1ccccc1C(=O)O" />
+          </div>
+          <button id="simBtn" type="button">Compute Similarity</button>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <div class="small mono" id="simOut">Similarity: —</div>
+          <div class="small mono" id="siSetOut">Set Sᵢ to: —</div>
+        </div>
+
+        <div id="simErrOut" class="error"></div>
+      </div>
+    </div>
+
+    <!-- 3) BS Calculator -->
+    <div class="card">
+      <h1>Binding Score (BS) Calculator</h1>
+      <p>Enter your parameters below to compute BS.</p>
+
+      <div class="grid">
+        <div>
+          <label for="Ri">Rᵢ</label>
+          <input id="Ri" type="number" step="any" value="1" />
+        </div>
+        <div>
+          <label for="Si">Sᵢ</label>
+          <input id="Si" type="number" step="any" value="0" />
+        </div>
+
+        <div>
+          <label for="Smax">Smax</label>
+          <input id="Smax" type="number" step="any" value="100" />
+        </div>
+        <div>
+          <label for="Rmax">Rmax</label>
+          <input id="Rmax" type="number" step="any" value="100" />
+        </div>
+
+        <div>
+          <label for="w">w (0 to 1)</label>
+          <input id="w" type="number" step="any" value="0.001" />
+        </div>
+        <div>
+          <label for="A">A</label>
+          <input id="A" type="number" step="any" value="0" />
+        </div>
+
+        <div>
+          <label for="B">B</label>
+          <input id="B" type="number" step="any" value="3.25" />
+        </div>
+        <div>
+          <label for="tau">τ (tau)</label>
+          <input id="tau" type="number" step="any" value="0.01" />
+        </div>
+      </div>
+
+      <div class="row">
+        <button id="calcBtn">Calculate</button>
+        <button id="resetBtn" type="button">Reset</button>
+
+        <div>
+          <div class="small">BS</div>
+          <div id="bsOut" class="result">—</div>
+          <div id="partsOut" class="small mono"></div>
+        </div>
+      </div>
+
+      <div id="errOut" class="error"></div>
+    </div>
+
+    <div class="card">
+      <h1>About</h1>
+      <p>This tool calculates a Binding Score (BS) based on user-provided parameters.</p>
+    </div>
+
+  </div>
+
+  <script>
+    // 1) Create SMILES redirect
+    document.getElementById("createSmilesBtn").addEventListener("click", () => {
+      window.open("https://pubchem.ncbi.nlm.nih.gov/edit3/index.html", "_blank", "noopener,noreferrer");
+    });
+
+    function getNum(id) {
+      const v = document.getElementById(id).value;
+      return Number(v);
+    }
+
+    function clamp01(x) {
+      if (!Number.isFinite(x)) return NaN;
+      return Math.min(1, Math.max(0, x));
+    }
+
+    // UPDATED EQUATION:
+    // BS = (Si / Smax) * [ w*(Ri/Rmax) + (1-w)*exp(-A/B) ] * min(1, Ri/(tau*Rmax))
+    function calcBS({Ri, Si, Smax, Rmax, w, A, B, tau}) {
+      const errors = [];
+      if (!(Smax > 0)) errors.push("Smax must be > 0");
+      if (!(Rmax > 0)) errors.push("Rmax must be > 0");
+      if (!(B > 0)) errors.push("B must be > 0");
+      if (!(tau > 0)) errors.push("τ (tau) must be > 0");
+
+      if (!Number.isFinite(w)) errors.push("w must be a number");
+      if (Number.isFinite(w) && (w < 0 || w > 1)) errors.push("w should be between 0 and 1");
+
+      if (![Ri, Si, A].every(Number.isFinite)) errors.push("Ri, Si, and A must be numbers");
+
+      if (errors.length) return { ok: false, errors };
+
+      const wUsed = clamp01(w);
+
+      const leading = Si / Smax;
+      const ratio = Ri / Rmax;
+      const expTerm = Math.exp((-A) / B);
+      const bracket = (wUsed * ratio) + ((1 - wUsed) * expTerm);
+      const minArg = Ri / (tau * Rmax);
+      const minTerm = Math.min(1, minArg);
+
+      const bs = leading * bracket * minTerm;
+
+      return { ok: true, bs, parts: { leading, ratio, expTerm, bracket, minArg, minTerm, wUsed } };
+    }
+
+    function format(x) {
+      if (!Number.isFinite(x)) return "NaN";
+      const abs = Math.abs(x);
+      if (abs !== 0 && (abs < 1e-4 || abs >= 1e6)) return x.toExponential(6);
+      return x.toFixed(6).replace(/\.?0+$/, "");
+    }
+
+    function computeAndRender() {
+      const inputs = {
+        Ri: getNum("Ri"),
+        Si: getNum("Si"),
+        Smax: getNum("Smax"),
+        Rmax: getNum("Rmax"),
+        w: getNum("w"),
+        A: getNum("A"),
+        B: getNum("B"),
+        tau: getNum("tau")
+      };
+
+      const out = document.getElementById("bsOut");
+      const parts = document.getElementById("partsOut");
+      const err = document.getElementById("errOut");
+
+      const res = calcBS(inputs);
+
+      if (!res.ok) {
+        out.textContent = "—";
+        parts.textContent = "";
+        err.textContent = "Fix these issues:\n• " + res.errors.join("\n• ");
+        return;
+      }
+
+      err.textContent = "";
+      out.textContent = format(res.bs);
+
+      parts.textContent =
+        `Si/Smax=${format(res.parts.leading)} | Ri/Rmax=${format(res.parts.ratio)}\n` +
+        `exp(−A/B)=${format(res.parts.expTerm)} | min(1, Ri/(τ·Rmax))=min(1, ${format(res.parts.minArg)})=${format(res.parts.minTerm)} | w=${format(res.parts.wUsed)}`;
+    }
+
+    document.getElementById("calcBtn").addEventListener("click", computeAndRender);
+    ["Ri","Si","Smax","Rmax","w","A","B","tau"].forEach(id => {
+      document.getElementById(id).addEventListener("input", computeAndRender);
+    });
+
+    // Similarity button handler
+    // IMPORTANT CHANGE: replace (not add) Sᵢ with similarity*100
+    async function computeSimilarityAndSetSi() {
+      const simErr = document.getElementById("simErrOut");
+      const simOut = document.getElementById("simOut");
+      const siSetOut = document.getElementById("siSetOut");
+
+      simErr.textContent = "";
+      simOut.textContent = "Similarity: …";
+      siSetOut.textContent = "Set Sᵢ to: …";
+
+      const smiles = (document.getElementById("smilesInput").value || "").trim();
+      if (!smiles) {
+        simOut.textContent = "Similarity: —";
+        siSetOut.textContent = "Set Sᵢ to: —";
+        simErr.textContent = "Please enter a SMILES string.";
+        return;
+      }
+
+      try {
+        const resp = await fetch("https://rdkit-api-703402153382.us-central1.run.app/tanimoto", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ smiles })
+        });
+
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) {
+          const msg = (data && data.detail) ? data.detail : "Failed to compute similarity.";
+          throw new Error(msg);
+        }
+
+        const similarity = Number(data.similarity);
+        if (!Number.isFinite(similarity)) throw new Error("API returned invalid similarity.");
+
+        // Convert to "Si units" (0-100) and REPLACE current Si
+        const siValue = similarity * 100;
+
+        const siEl = document.getElementById("Si");
+        siEl.value = siValue.toFixed(4).replace(/\.?0+$/, "");
+
+        simOut.textContent = `Similarity: ${similarity.toFixed(6)}`;
+        siSetOut.textContent = `Set Sᵢ to: ${siEl.value}`;
+
+        computeAndRender();
+      } catch (e) {
+        simOut.textContent = "Similarity: —";
+        siSetOut.textContent = "Set Sᵢ to: —";
+        simErr.textContent = `Similarity error: ${e.message}`;
+      }
+    }
+
+    document.getElementById("simBtn").addEventListener("click", computeSimilarityAndSetSi);
+
+    // Reset defaults (UPDATED to match your new defaults)
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      document.getElementById("Ri").value = 1;
+      document.getElementById("Si").value = 0;
+
+      document.getElementById("Smax").value = 100;
+      document.getElementById("Rmax").value = 100;
+      document.getElementById("w").value = 0.001;
+      document.getElementById("B").value = 3.25;
+      document.getElementById("tau").value = 0.01;
+
+      document.getElementById("A").value = 0;
+
+      document.getElementById("smilesInput").value = "";
+      document.getElementById("simOut").textContent = "Similarity: —";
+      document.getElementById("siSetOut").textContent = "Set Sᵢ to: —";
+      document.getElementById("simErrOut").textContent = "";
+
+      computeAndRender();
+    });
+
+    computeAndRender();
+  </script>
+</body>
+</html>
 
