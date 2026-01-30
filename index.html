@@ -128,26 +128,35 @@
           <input id="Ri" type="number" step="any" value="1" />
         </div>
         <div>
-          <label for="Smax">Smax</label>
-          <input id="Smax" type="number" step="any" value="100" />
-        </div>
-
-        <div>
           <label for="Si">Sᵢ</label>
           <input id="Si" type="number" step="any" value="0" />
         </div>
+
         <div>
-          <label for="w">w (0 to 1)</label>
-          <input id="w" type="number" step="any" value="0.4" />
+          <label for="Smax">Smax</label>
+          <input id="Smax" type="number" step="any" value="100" />
+        </div>
+        <div>
+          <label for="Rmax">Rmax</label>
+          <input id="Rmax" type="number" step="any" value="100" />
         </div>
 
+        <div>
+          <label for="w">w (0 to 1)</label>
+          <input id="w" type="number" step="any" value="0.001" />
+        </div>
         <div>
           <label for="A">A</label>
           <input id="A" type="number" step="any" value="0" />
         </div>
+
         <div>
-          <label for="beta">β</label>
-          <input id="beta" type="number" step="any" value="4" />
+          <label for="B">B</label>
+          <input id="B" type="number" step="any" value="3.25" />
+        </div>
+        <div>
+          <label for="tau">τ (tau)</label>
+          <input id="tau" type="number" step="any" value="0.01" />
         </div>
       </div>
 
@@ -188,27 +197,34 @@
       return Math.min(1, Math.max(0, x));
     }
 
-    // BS = (Ri/Smax) * [ w*Si + (1-w)*exp(-A/beta) ] * min(1, Ri)
-    function calcBS({Ri, Smax, Si, w, A, beta}) {
+    // UPDATED EQUATION:
+    // BS = (Si / Smax) * [ w*(Ri/Rmax) + (1-w)*exp(-A/B) ] * min(1, Ri/(tau*Rmax))
+    function calcBS({Ri, Si, Smax, Rmax, w, A, B, tau}) {
       const errors = [];
       if (!(Smax > 0)) errors.push("Smax must be > 0");
-      if (!(beta > 0)) errors.push("β (beta) must be > 0");
+      if (!(Rmax > 0)) errors.push("Rmax must be > 0");
+      if (!(B > 0)) errors.push("B must be > 0");
+      if (!(tau > 0)) errors.push("τ (tau) must be > 0");
+
       if (!Number.isFinite(w)) errors.push("w must be a number");
       if (Number.isFinite(w) && (w < 0 || w > 1)) errors.push("w should be between 0 and 1");
+
       if (![Ri, Si, A].every(Number.isFinite)) errors.push("Ri, Si, and A must be numbers");
 
       if (errors.length) return { ok: false, errors };
 
       const wUsed = clamp01(w);
 
-      const leading = Ri / Smax;
-      const expTerm = Math.exp((-A) / beta);
-      const bracket = (wUsed * Si) + ((1 - wUsed) * expTerm);
-      const minTerm = Math.min(1, Ri);
+      const leading = Si / Smax;
+      const ratio = Ri / Rmax;
+      const expTerm = Math.exp((-A) / B);
+      const bracket = (wUsed * ratio) + ((1 - wUsed) * expTerm);
+      const minArg = Ri / (tau * Rmax);
+      const minTerm = Math.min(1, minArg);
 
       const bs = leading * bracket * minTerm;
 
-      return { ok: true, bs, parts: { leading, expTerm, bracket, minTerm, wUsed } };
+      return { ok: true, bs, parts: { leading, ratio, expTerm, bracket, minArg, minTerm, wUsed } };
     }
 
     function format(x) {
@@ -221,11 +237,13 @@
     function computeAndRender() {
       const inputs = {
         Ri: getNum("Ri"),
-        Smax: getNum("Smax"),
         Si: getNum("Si"),
+        Smax: getNum("Smax"),
+        Rmax: getNum("Rmax"),
         w: getNum("w"),
         A: getNum("A"),
-        beta: getNum("beta")
+        B: getNum("B"),
+        tau: getNum("tau")
       };
 
       const out = document.getElementById("bsOut");
@@ -245,12 +263,12 @@
       out.textContent = format(res.bs);
 
       parts.textContent =
-        `Ri/Smax=${format(res.parts.leading)} | exp(−A/β)=${format(res.parts.expTerm)}\n` +
-        `min(1,Ri)=${format(res.parts.minTerm)} | w=${format(res.parts.wUsed)}`;
+        `Si/Smax=${format(res.parts.leading)} | Ri/Rmax=${format(res.parts.ratio)}\n` +
+        `exp(−A/B)=${format(res.parts.expTerm)} | min(1, Ri/(τ·Rmax))=min(1, ${format(res.parts.minArg)})=${format(res.parts.minTerm)} | w=${format(res.parts.wUsed)}`;
     }
 
     document.getElementById("calcBtn").addEventListener("click", computeAndRender);
-    ["Ri","Smax","Si","w","A","beta"].forEach(id => {
+    ["Ri","Si","Smax","Rmax","w","A","B","tau"].forEach(id => {
       document.getElementById(id).addEventListener("input", computeAndRender);
     });
 
@@ -308,14 +326,18 @@
 
     document.getElementById("simBtn").addEventListener("click", computeSimilarityAndSetSi);
 
-    // Reset defaults (match your current UI defaults)
+    // Reset defaults (UPDATED to match your new defaults)
     document.getElementById("resetBtn").addEventListener("click", () => {
       document.getElementById("Ri").value = 1;
-      document.getElementById("Smax").value = 100;
       document.getElementById("Si").value = 0;
-      document.getElementById("w").value = 0.4;
+
+      document.getElementById("Smax").value = 100;
+      document.getElementById("Rmax").value = 100;
+      document.getElementById("w").value = 0.001;
+      document.getElementById("B").value = 3.25;
+      document.getElementById("tau").value = 0.01;
+
       document.getElementById("A").value = 0;
-      document.getElementById("beta").value = 4;
 
       document.getElementById("smilesInput").value = "";
       document.getElementById("simOut").textContent = "Similarity: —";
