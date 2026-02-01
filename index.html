@@ -136,14 +136,9 @@
           <label for="Smax">Smax</label>
           <input id="Smax" type="number" step="any" value="100" />
         </div>
-        <div>
-          <label for="Rmax">Rmax</label>
-          <input id="Rmax" type="number" step="any" value="100" />
-        </div>
-
-        <div>
+<div>
           <label for="w">w (0 to 1)</label>
-          <input id="w" type="number" step="any" value="0.001" />
+          <input id="w" type="number" step="any" value="0.4" />
         </div>
         <div>
           <label for="A">A</label>
@@ -151,12 +146,12 @@
         </div>
 
         <div>
-          <label for="B">B</label>
-          <input id="B" type="number" step="any" value="3.25" />
+          <label for="B">β (beta)</label>
+          <input id="B" type="number" step="any" value="4" />
         </div>
         <div>
           <label for="tau">τ (tau)</label>
-          <input id="tau" type="number" step="any" value="0.01" />
+          <input id="tau" type="number" step="any" value="1" />
         </div>
       </div>
 
@@ -197,13 +192,12 @@
       return Math.min(1, Math.max(0, x));
     }
 
-    // UPDATED EQUATION:
-    // BS = (Si / Smax) * [ w*(Ri/Rmax) + (1-w)*exp(-A/B) ] * min(1, Ri/(tau*Rmax))
-    function calcBS({Ri, Si, Smax, Rmax, w, A, B, tau}) {
+    // UPDATED EQUATION (per latest attachment):
+    // BS = [ (Ri / Smax) * ( w * Si + (1 - w) * exp( -A / β ) ) ] * τ
+    function calcBS({Ri, Si, Smax, w, A, B, tau}) {
       const errors = [];
       if (!(Smax > 0)) errors.push("Smax must be > 0");
-      if (!(Rmax > 0)) errors.push("Rmax must be > 0");
-      if (!(B > 0)) errors.push("B must be > 0");
+      if (!(B > 0)) errors.push("β (beta) must be > 0");
       if (!(tau > 0)) errors.push("τ (tau) must be > 0");
 
       if (!Number.isFinite(w)) errors.push("w must be a number");
@@ -215,16 +209,12 @@
 
       const wUsed = clamp01(w);
 
-      const leading = Si / Smax;
-      const ratio = Ri / Rmax;
+      const leading = Ri / Smax;
       const expTerm = Math.exp((-A) / B);
-      const bracket = (wUsed * ratio) + ((1 - wUsed) * expTerm);
-      const minArg = Ri / (tau * Rmax);
-      const minTerm = Math.min(1, minArg);
+      const bracket = (wUsed * Si) + ((1 - wUsed) * expTerm);
+      const bs = leading * bracket * tau;
 
-      const bs = leading * bracket * minTerm;
-
-      return { ok: true, bs, parts: { leading, ratio, expTerm, bracket, minArg, minTerm, wUsed } };
+      return { ok: true, bs, parts: { leading, expTerm, bracket, wUsed } };
     }
 
     function format(x) {
@@ -239,7 +229,6 @@
         Ri: getNum("Ri"),
         Si: getNum("Si"),
         Smax: getNum("Smax"),
-        Rmax: getNum("Rmax"),
         w: getNum("w"),
         A: getNum("A"),
         B: getNum("B"),
@@ -263,12 +252,13 @@
       out.textContent = format(res.bs);
 
       parts.textContent =
-        `Si/Smax=${format(res.parts.leading)} | Ri/Rmax=${format(res.parts.ratio)}\n` +
-        `exp(−A/B)=${format(res.parts.expTerm)} | min(1, Ri/(τ·Rmax))=min(1, ${format(res.parts.minArg)})=${format(res.parts.minTerm)} | w=${format(res.parts.wUsed)}`;
+        `Ri/Smax=${format(res.parts.leading)} | exp(−A/β)=${format(res.parts.expTerm)}
+` +
+        `bracket=${format(res.parts.bracket)} | τ=${format(inputs.tau)} | w=${format(res.parts.wUsed)}`;
     }
 
     document.getElementById("calcBtn").addEventListener("click", computeAndRender);
-    ["Ri","Si","Smax","Rmax","w","A","B","tau"].forEach(id => {
+    ["Ri","Si","Smax","w","A","B","tau"].forEach(id => {
       document.getElementById(id).addEventListener("input", computeAndRender);
     });
 
@@ -332,10 +322,9 @@
       document.getElementById("Si").value = 0;
 
       document.getElementById("Smax").value = 100;
-      document.getElementById("Rmax").value = 100;
-      document.getElementById("w").value = 0.001;
-      document.getElementById("B").value = 3.25;
-      document.getElementById("tau").value = 0.01;
+      document.getElementById("w").value = 0.4;
+      document.getElementById("B").value = 4;
+      document.getElementById("tau").value = 1;
 
       document.getElementById("A").value = 0;
 
